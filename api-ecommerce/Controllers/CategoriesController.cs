@@ -129,12 +129,8 @@ namespace api_ecommerce.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult DeleteCategory(int id)
         {
-            if (!_categoryRepository.CategoryExists(id))
-            {
-                return NotFound($"La categoria con id {id} no existe");
-            }
-
             var category = _categoryRepository.GetCategory(id);
+            
             if (category == null)
             {
                 return NotFound($"La categoria con id {id} no existe");
