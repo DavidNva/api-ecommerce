@@ -10,11 +10,10 @@
 BuildHost-netcore/
 BuildHost-net472/
 # Visual Studio Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/
+
+# Claude Code
+.claude/
 
 # User-specific files
 *.suo
