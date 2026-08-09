@@ -1,0 +1,31 @@
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver2022
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "1"
+      MSSQL_SA_PASSWORD: "MyStrongPass123"
+      MSSQL_PID: "Developer"
+    volumes:
+      - sqlserverdata:/var/opt/mssql
+volumes:
+  sqlserverdata:
+# Comandos útiles:
+# Levantar los contenedores en segundo plano:
+#   docker-compose up -d
+# Apagar y eliminar contenedores (no borra los volúmenes):
+#   docker-compose down
+#Explicacion de docker image:
+# image: mcr.microsoft.com/mssql/server:2022-latest   Este es literal un repositororio oficial de microsoft, la imagen
+#     container_name: sqlserver2022     Este es el nombre que le colocamos para identificar 
+#     ports:
+#       - "1433:1433"     //Se definen los puertos que serán disponibles para este contenedor
+
+# ACCEPT_EULA: "1"     //Estamos aceptando terminos y condiciones del uso de SQL Server
+      # MSSQL_SA_PASSWORD: "MyStrongPass123"//En teoria este es la contraseña, del sa , el user admin de sql server
+      # MSSQL_PID: "Developer" //Indicamos que usaremos el MicrosoftSQL Server edición Developer
+
+# volumes:
+#       - sqlserverdata:/var/opt/mssql    //Indica que vamos a montar un volumen donde guardaremos la BD, para si reiniciamos o eliminamos el contenedor, persista la información
