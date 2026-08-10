@@ -13,7 +13,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
 //Configuracion Inyeccion de dependencias
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 //builder.Services.AddAutoMapper(typeof(Program).Assembly);
-builder.Services.AddAutoMapper(cfg => {
+builder.Services.AddAutoMapper(cfg =>
+{
     cfg.AddMaps(typeof(Program).Assembly);
 });
 

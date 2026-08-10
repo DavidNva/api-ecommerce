@@ -21,8 +21,8 @@ namespace api_ecommerce.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status200OK)]//Se procesó con éxito y se devolvió el recurso solicitado
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]//Sin permisos
         public IActionResult GetCategories()
         {
             var categories = _categoryRepository.GetCategories();
@@ -37,10 +37,10 @@ namespace api_ecommerce.Controllers
         }
 
         [HttpGet("{id:int}", Name = "GetCategory")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]//Se procesó con éxito y se devolvió el recurso solicitado
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]//Sin permisos
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]//Mal formada la solicitud
+        [ProducesResponseType(StatusCodes.Status404NotFound)]//Recurso no encontrado
         public IActionResult GetCategory(int id)
         {
             var category = _categoryRepository.GetCategory(id);
@@ -53,12 +53,11 @@ namespace api_ecommerce.Controllers
         }
 
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status201Created)]//Se procesó con éxito y se creó un nuevo recurso
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]//Sin permisos
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]//Mal formada la solicitud
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]//Aplica, en autorizacion, si el usuario no esta autenticado o autorizado en estecaso
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]//Error del servidor
         public IActionResult CreateCategory([FromBody] CreateCategoryDto createCategoryDto)
         {
             if (createCategoryDto == null)
@@ -84,12 +83,12 @@ namespace api_ecommerce.Controllers
         }
 
         [HttpPatch("{id:int}", Name = "UpdateCategory")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]//Se procesó con éxito, pero no hay contenido que devolver
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]//Sin permisos
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]//Mal formada la solicitud
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]//Aplica, en autorizacion, si el usuario no esta autenticado o autorizado en estecaso
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]//Error del servidor
         public IActionResult UpdateCategory(int id, [FromBody] CreateCategoryDto updateCategoryDto)
         {
             if (!_categoryRepository.CategoryExists(id))
@@ -121,16 +120,16 @@ namespace api_ecommerce.Controllers
         }
 
         [HttpDelete("{id:int}", Name = "DeleteCategory")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]//Se procesó con éxito, pero no hay contenido que devolver
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]//Sin permisos
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]//Mal formada la solicitud
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]//Aplica, en autorizacion, si el usuario no esta autenticado o autorizado en estecaso
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]//Error del servidor
         public IActionResult DeleteCategory(int id)
         {
             var category = _categoryRepository.GetCategory(id);
-            
+
             if (category == null)
             {
                 return NotFound($"La categoria con id {id} no existe");
