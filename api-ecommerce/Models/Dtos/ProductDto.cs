@@ -14,4 +14,6 @@ public class ProductDto
 
     //Relación con el modelo Categorys
     public int CategoryId { get; set; }//Llave foranea que hace referencia a la tabla Category
+
+    public string CategoryName { get; set; } = string.Empty;
 }

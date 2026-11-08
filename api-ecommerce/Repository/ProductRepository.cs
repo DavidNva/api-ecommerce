@@ -1,6 +1,7 @@
 ﻿using api_ecommerce.Data;
 using api_ecommerce.Models;
 using api_ecommerce.Repository.IRepository;
+using Microsoft.EntityFrameworkCore;
 
 namespace api_ecommerce.Repository;
 
@@ -60,12 +61,12 @@ public class ProductRepository : IProductRepository
         if (id <= 0)
             return null;
 
-        return _db.Products.FirstOrDefault(p => p.ProductId == id);
+        return _db.Products.Include(p => p.Category).FirstOrDefault(p => p.ProductId == id);
     }
 
     public ICollection<Product> GetProducts()
     {
-        return _db.Products.OrderBy(p => p.Name).ToList();
+        return _db.Products.Include(p => p.Category).OrderBy(p => p.Name).ToList();
     }
 
     public ICollection<Product> GetProductsForCategory(int categoryId)
