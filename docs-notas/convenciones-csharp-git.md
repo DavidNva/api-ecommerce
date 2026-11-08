@@ -68,3 +68,24 @@ Agregar a `.editorconfig`:
 ```ini
 csharp_style_namespace_declarations = file_scoped:suggestion
 ```
+
+---
+
+## Interfaz `internal` implementada por una clase `public`
+
+```csharp
+interface IProductRepository { ... }                 // sin modificador → internal
+public class ProductRepository : IProductRepository  // ✅ compila
+```
+
+**Una clase `public` sí puede implementar una interfaz `internal`.** La regla de accesibilidad estricta aplica a la **clase base**, no a las interfaces implementadas.
+
+| Caso | ¿Compila? |
+|---|---|
+| `public class` hereda de una `internal class` | ❌ Error de accesibilidad inconsistente |
+| `public class` implementa una `internal interface` | ✅ Sí |
+| `public interface` hereda de una `internal interface` | ❌ Error de accesibilidad inconsistente |
+
+Aun así, conviene declarar la interfaz `public` por coherencia con `ICategoryRepository` y para poder usarla desde otros proyectos (por ejemplo, un proyecto de tests).
+
+⚠️ Corrección: en la revisión inicial se afirmó que esto daba un error de compilación. Era incorrecto.

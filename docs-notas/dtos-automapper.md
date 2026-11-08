@@ -79,3 +79,99 @@ No todos los DTOs tienen las mismas propiedades:
 |---|---|---|
 | `CategoryDto` | Mostrar datos (GET) | Incluye `Id`, quizás fecha de creación |
 | `CreateCategoryDto` | Recibir datos para crear (POST) | Sin `Id` (lo genera la BD), sin campos generados por el sistema |
+
+---
+
+## Dos mapeos distintos: no confundirlos
+
+Si el repositorio ya trae `Product`, ¿por qué `ProductDto`? Porque "mapeo" son dos cosas:
+
+| Mapeo | Entre qué | Quién lo hace |
+|---|---|---|
+| **ORM** | Tabla `Products` en SQL ↔ clase `Product` | EF Core |
+| **Objeto a objeto** | `Product` ↔ `ProductDto` | AutoMapper |
+
+`Product` es la fila de la BD. `ProductDto` es lo que decides mostrarle al cliente de la API.
+
+### Riesgos extra de exponer `Product` directo
+
+| Riesgo | Ejemplo en el e-commerce |
+|---|---|
+| Fuga de datos al crecer el modelo | Hoy `Product` no tiene datos sensibles. Mañana agregas `Cost` o `SupplierId` y se filtran sin que nadie lo decida. |
+| Navegación | `Product.Category` es una entidad completa. Con `Include` viaja anidada, y con relaciones bidireccionales el serializador puede caer en **referencias circulares**. |
+| Over-posting | Si recibes `Product` en un POST, el cliente puede mandar `ProductId` o `CreationDate`. Por eso existe `CreateProductDto` sin esos campos. |
+| Acoplamiento al esquema | Renombrar una columna rompe el contrato con los clientes. |
+
+Hoy `Product` y `ProductDto` son casi idénticos. Es normal: el patrón se justifica por lo que pasa cuando el modelo crece.
+
+### Mapear una colección completa
+
+```csharp
+// Con foreach
+var productsDto = new List<ProductDto>();
+foreach (var product in products)
+    productsDto.Add(_mapper.Map<ProductDto>(product));
+
+// Equivalente, una sola línea
+var productsDto = _mapper.Map<List<ProductDto>>(products);
+```
+
+Mismo resultado. Más adelante, `ProjectTo<ProductDto>` permite que el SQL traiga solo las columnas del DTO (tema de `Include` y N+1).
+
+### ⚠️ `Product.Category` es `required`
+
+`CreateProductDto` solo trae `CategoryId`, no el objeto `Category`. AutoMapper no puede llenar un `required Category`, así que mapear `CreateProductDto → Product` falla o deja el producto inválido. La navegación no debería ser `required` si el DTO solo trae la FK.
+
+---
+
+## El parámetro del método define el body (y Swagger)
+
+```csharp
+public IActionResult CreateProduct([FromBody] CreateProductDto createProductDto)
+```
+
+| Parte | Para qué sirve |
+|---|---|
+| `CreateProductDto` | Su tipo define qué campos acepta la API. Swagger arma el esquema y el ejemplo con sus propiedades públicas. |
+| `[FromBody]` | Indica que se llena con el JSON del body. |
+| `createProductDto` (nombre) | Solo es el nombre de la variable. No afecta al JSON ni a Swagger. |
+
+Si agregas o quitas una propiedad del DTO, cambia lo que la API acepta. Ver `configuracion-proyecto.md` para el detalle de cómo Swagger lo genera.
+
+### ⚠️ La validación va en el DTO, no en la entidad
+
+La validación automática de `[ApiController]` se aplica al **parámetro que recibe el método**, o sea al DTO. Si las anotaciones solo están en la entidad, no se ejecutan en la entrada.
+
+Con `CreateProductDto` sin anotaciones, estos requests pasan la validación:
+
+| Request | Resultado |
+|---|---|
+| `name: ""` | ✅ Pasa |
+| `price: -50` | ✅ Pasa |
+| `stock: -3` | ✅ Pasa |
+
+Los `[Required]` y `[Range]` de `Product` no protegen la entrada de la API, porque el cliente nunca manda un `Product`. Hay que repetirlos en `CreateProductDto`.
+
+### Campo calculado desde una relación: `CategoryName`
+
+```csharp
+CreateMap<Product, ProductDto>()
+    .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))
+    .ReverseMap();
+```
+
+`ForMember` + `MapFrom` sirve cuando el destino no tiene una propiedad con el mismo nombre en el origen: aquí `CategoryName` sale de `Category.Name`.
+
+⚠️ Para que `Category` tenga datos, la consulta debe traerla con `Include(p => p.Category)`. Sin `Include`, `Category` es `null` y `CategoryName` queda vacío **sin ningún error**.
+
+| Dónde se carga el producto | ¿Trae `Category`? |
+|---|---|
+| `GetProduct` y `GetProducts` | ✅ Con `Include` |
+| `GetProductsForCategory`, `SearchProduct` | ❌ Sin `Include`, el `CategoryName` sale vacío |
+| Producto recién creado (`CreateProduct`) | ❌ No se cargó la relación; `CategoryName` sale vacío en la respuesta del POST |
+
+Esto es el inicio del tema `Include` / `ThenInclude` y el problema N+1 (pendiente de repasar).
+
+### Campos que el cliente no debería poder mandar
+
+`CreateProductDto` incluye `UpdateDate`, así que Swagger lo muestra y la API lo acepta, aunque el repositorio lo sobrescribe. Un DTO de entrada solo debería tener los campos que el cliente realmente decide.

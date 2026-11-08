@@ -93,6 +93,45 @@ Deben coincidir **exactamente** (mismo texto, sensible a mayúsculas). Tres esce
 
 ---
 
+## `Name` sin definir, `CreatedAtRoute` vs `CreatedAtAction`
+
+**Sin `Name`, la ruta queda sin nombre.** El nombre del método **no** se usa como nombre de ruta por defecto.
+
+Hay dos formas de generar el `Location` del `201 Created`:
+
+| Mecanismo | Cómo busca | ¿Necesita `Name`? |
+|---|---|---|
+| `CreatedAtRoute("GetProduct", ...)` | Por **nombre de ruta** | ✅ Sí |
+| `CreatedAtAction(nameof(GetProduct), ...)` | Por **nombre del método (acción)** | ❌ No |
+
+| | `CreatedAtRoute` + `Name` | `CreatedAtAction` |
+|---|---|---|
+| Ventaja | El nombre de ruta es estable aunque renombres el método | `nameof` te protege con el compilador al renombrar |
+| Riesgo | Un string con typo falla en runtime | Casi ninguno |
+
+Los valores de ruta del tercer argumento deben llamarse **igual que el parámetro** de la ruta: si la ruta es `{productId:int}`, usa `new { productId = ... }`, no `new { id = ... }`.
+
+**Por qué el GET de la lista no tiene `Name`:** nadie necesita generar una URL hacia la lista. `Name` solo se pone en rutas a las que **apuntas** desde otro lado.
+
+---
+
+## `{productId:int}` vs `{productId}`: qué cambia
+
+`:int` es una restricción de ruta (route constraint). No es obligatoria: cambia **qué código** recibe el cliente con un valor inválido.
+
+| Petición | Con `{productId:int}` | Con `{productId}` |
+|---|---|---|
+| `GET /api/products/5` | Entra a la acción | Entra a la acción |
+| `GET /api/products/abc` | **404** (la ruta no coincide, no entra al método) | **400** automático de `[ApiController]` (falla el binding a `int`) |
+
+Consecuencias:
+- Con `:int`, un `[ProducesResponseType(400)]` queda sin usar (esos casos dan 404).
+- Las restricciones también evitan ambigüedad. Si mañana agregas `GET api/products/search`, un `{productId}` sin restricción también coincidiría con la palabra "search".
+
+Recomendación: dejar `:int`, como en Category.
+
+---
+
 ## Route constraint ausente → el parámetro pasa a query string, no desaparece
 
 Si quitas el segmento de ruta (`{id:int}`) pero el método sigue pidiendo `int id`, **no truena** — ASP.NET Core busca automáticamente ese parámetro en el **query string**:
@@ -190,3 +229,26 @@ private const string CustomErrorKey = "CustomError";
 ```
 
 **Alternativa más estándar** (evita reutilizar `ModelState` fuera de su propósito): usar `ProblemDetails`, el mismo formato que ASP.NET Core ya genera automáticamente en sus 400 automáticos.
+
+---
+
+## Qué hace `[ApiController]` por ti
+
+| Comportamiento | Efecto |
+|---|---|
+| Validación automática del modelo | Si el body es inválido, responde **400** antes de entrar a tu método |
+| Inferencia del origen | Un tipo complejo se asume `[FromBody]`, un tipo simple viene de ruta o query |
+| Respuestas de error en `ProblemDetails` | Los 400 automáticos usan ese formato |
+
+Consecuencias en el código:
+
+```csharp
+public IActionResult CreateProduct([FromBody] CreateProductDto dto)
+{
+    if (dto == null)            // casi nunca se ejecuta
+        return BadRequest(ModelState);
+```
+
+- Con body vacío o JSON roto, el **400 ya ocurrió** antes de llegar al método. Ese `if (dto == null)` es código muerto en la práctica. No hace daño, pero no aporta.
+- `[FromBody]` es opcional con `[ApiController]`. Dejarlo explícito es válido por claridad.
+- La validación corre sobre el **DTO**. Los `[Required]` / `[Range]` de la entidad no cuentan (ver `dtos-automapper.md`).

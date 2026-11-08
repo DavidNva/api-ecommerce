@@ -126,11 +126,73 @@ GET http://localhost:5000/api/Categories/3  →  405 Method Not Allowed
 
 ---
 
+## Prueba 8 — Template sin llaves: `"productId:int"` en vez de `"{productId:int}"`
+
+Typo real en `GetProduct` de `ProductsController`:
+
+```csharp
+[HttpGet("productId:int", Name = "GetProduct")]   // ← faltan las llaves
+public IActionResult GetProduct(int productId) { ... }
+```
+
+**Resultado:** compila, arranca y, probando desde Swagger, "funciona". Pero la URL real no es la que debería.
+
+| Cómo está escrito | Cómo se interpreta |
+|---|---|
+| `"productId:int"` (sin llaves) | **Texto literal**: ruta `api/Products/productId:int`. El `productId` se busca en el query string. |
+| `"{productId:int}"` (con llaves) | **Parámetro de ruta**: `api/Products/5`, solo enteros. |
+
+URL que genera Swagger con el typo (deducida, falta confirmar con el *Request URL* de Swagger):
+
+```
+GET /api/Products/productId:int?productId=5
+```
+
+Un cliente que haga `GET /api/Products/5` (lo normal en REST) recibe **404**.
+
+**Confirma:** es el mismo patrón de error silencioso de la Prueba 5. Que el endpoint responda en Swagger **no prueba** que la URL sea la correcta: revisar siempre el *Request URL* que muestra Swagger.
+
+---
+
+## Prueba 9 — `CreatedAtRoute` con `new { id = ... }` cuando la ruta pide `{productId}`
+
+```csharp
+[HttpGet("{productId:int}", Name = "GetProduct")]
+public IActionResult GetProduct(int productId) { ... }
+```
+```csharp
+// En el POST:
+return CreatedAtRoute("GetProduct", new { id = product.ProductId }, product);   // ← "id", no "productId"
+```
+
+| Acción | Resultado |
+|---|---|
+| `POST /api/Products` | ❌ `500` — `InvalidOperationException: No route matches the supplied values` |
+| Compilación | ✅ Sin error ni warning |
+
+**Por qué no hay error de compilación:** el nombre de la ruta (`"GetProduct"`) es un `string` y los valores (`new { id = ... }`) son un objeto anónimo que se lee por reflexión. El compilador no los compara contra la plantilla de la ruta. Solo se valida en **runtime**, al ejecutar esa línea.
+
+**Por qué falla:** para construir el `Location`, ASP.NET rellena la plantilla `api/Products/{productId}` con los valores que le pasas. Le diste `id`, y la plantilla necesita `productId`. Falta un valor requerido, así que no hay ruta que coincida.
+
+**Confirma:**
+- Los nombres de los valores deben coincidir **exactamente** con los parámetros de la plantilla, no con el nombre de la propiedad de la entidad.
+- El producto **sí se guarda** en la BD antes del error (el `SaveChanges()` ya se ejecutó). Reintentar el mismo POST da `400 "el producto ya existe"`.
+
+**Resuelto:**
+
+```csharp
+return CreatedAtRoute("GetProduct", new { productId = product.ProductId }, productDto);
+```
+
+El nombre del valor coincide con la plantilla (`productId`) y además se devuelve el `ProductDto` en lugar de la entidad.
+
+---
+
 ## Resumen de errores según el momento en que aparecen
 
 | Momento | Tipo de error |
 |---|---|
 | Al iniciar la app | `Name` duplicado con templates distintos · constraint inexistente (`:string`) |
-| En runtime, solo al ejecutar esa línea | `CreatedAtRoute` busca un `Name` que no existe |
+| En runtime, solo al ejecutar esa línea | `CreatedAtRoute` busca un `Name` que no existe · o recibe valores con otro nombre que el de la plantilla (`id` vs `productId`, Prueba 9) |
 | En runtime, al recibir el request | Constraint no coincide con el tipo del parámetro (`400`) · ruta existe pero verbo no coincide (`405`) |
-| Nunca falla, pero es un bug silencioso | Falta el parámetro en la firma del método (se ignora el valor de la URL) · quitar `{id:int}` cambia path→query sin que nadie lo note |
+| Nunca falla, pero es un bug silencioso | Falta el parámetro en la firma del método (se ignora el valor de la URL) · quitar `{id:int}` cambia path→query sin que nadie lo note · olvidar las llaves (`"productId:int"`) deja la ruta como texto literal (Prueba 8) |
