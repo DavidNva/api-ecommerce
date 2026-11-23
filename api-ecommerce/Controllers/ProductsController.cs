@@ -16,8 +16,8 @@ public class ProductsController : ControllerBase
     private readonly IMapper _mapper;
 
     public ProductsController(
-        IProductRepository productRepository, 
-        IMapper mapper, 
+        IProductRepository productRepository,
+        IMapper mapper,
         ICategoryRepository categoryRepository)
     {
         _productRepository = productRepository;
@@ -89,5 +89,36 @@ public class ProductsController : ControllerBase
         var productDto = _mapper.Map<ProductDto>(createdProduct);
 
         return CreatedAtRoute("GetProduct", new { productId = product.ProductId }, productDto);
+    }
+
+    [HttpGet("searchProductByCategory/{categoryId:int}", Name = "GetProductsForCategory")]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult GetProductsForCategory(int categoryId)
+    {
+        var products = _productRepository.GetProductsForCategory(categoryId);
+        if (products.Count == 0)
+            return NotFound($"Los productos con la categoria {categoryId} no existen");
+
+        var productsDto = _mapper.Map<List<ProductDto>>(products);
+        return Ok(productsDto);
+    }
+
+    //Para string parameter por default es string, por lo que no se coloca el :string como se hace con demas tipos como :int, ejemplo del enpoint anterior
+    [HttpGet("searchProductByNameDesc/{name}", Name = "SearchProducts")]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult SearchProducts(string name)
+    {
+        var products = _productRepository.SearchProduct(name);
+        if (products.Count == 0)
+            return NotFound($"Los productos con el nombre {name} no existen");
+
+        var productsDto = _mapper.Map<List<ProductDto>>(products);
+        return Ok(productsDto);
     }
 }
