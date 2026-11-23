@@ -107,16 +107,16 @@ public class ProductsController : ControllerBase
     }
 
     //Para string parameter por default es string, por lo que no se coloca el :string como se hace con demas tipos como :int, ejemplo del enpoint anterior
-    [HttpGet("searchProductByNameDesc/{name}", Name = "SearchProducts")]
+    [HttpGet("searchProductByNameDesc/{searchTerm}", Name = "SearchProducts")]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public IActionResult SearchProducts(string name)
+    public IActionResult SearchProducts(string searchTerm)
     {
-        var products = _productRepository.SearchProduct(name);
+        var products = _productRepository.SearchProducts(searchTerm);
         if (products.Count == 0)
-            return NotFound($"Los productos con el nombre {name} no existen");
+            return NotFound($"Los productos con el nombre o descripcion {searchTerm} no existen");
 
         var productsDto = _mapper.Map<List<ProductDto>>(products);
         return Ok(productsDto);
